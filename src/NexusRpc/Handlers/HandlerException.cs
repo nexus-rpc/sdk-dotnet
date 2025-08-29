@@ -10,18 +10,18 @@ namespace NexusRpc.Handlers
     public class HandlerException : Exception
     {
         private static readonly Dictionary<string, HandlerErrorType> StringToErrorType = new()
-            {
-                ["UNKNOWN"] = HandlerErrorType.Unknown,
-                ["BAD_REQUEST"] = HandlerErrorType.BadRequest,
-                ["UNAUTHENTICATED"] = HandlerErrorType.Unauthenticated,
-                ["UNAUTHORIZED"] = HandlerErrorType.Unauthorized,
-                ["NOT_FOUND"] = HandlerErrorType.NotFound,
-                ["RESOURCE_EXHAUSTED"] = HandlerErrorType.ResourceExhausted,
-                ["INTERNAL"] = HandlerErrorType.Internal,
-                ["NOT_IMPLEMENTED"] = HandlerErrorType.NotImplemented,
-                ["UNAVAILABLE"] = HandlerErrorType.Unavailable,
-                ["UPSTREAM_TIMEOUT"] = HandlerErrorType.UpstreamTimeout,
-            };
+        {
+            ["UNKNOWN"] = HandlerErrorType.Unknown,
+            ["BAD_REQUEST"] = HandlerErrorType.BadRequest,
+            ["UNAUTHENTICATED"] = HandlerErrorType.Unauthenticated,
+            ["UNAUTHORIZED"] = HandlerErrorType.Unauthorized,
+            ["NOT_FOUND"] = HandlerErrorType.NotFound,
+            ["RESOURCE_EXHAUSTED"] = HandlerErrorType.ResourceExhausted,
+            ["INTERNAL"] = HandlerErrorType.Internal,
+            ["NOT_IMPLEMENTED"] = HandlerErrorType.NotImplemented,
+            ["UNAVAILABLE"] = HandlerErrorType.Unavailable,
+            ["UPSTREAM_TIMEOUT"] = HandlerErrorType.UpstreamTimeout,
+        };
 
         private static readonly Dictionary<HandlerErrorType, string> ErrorTypeToString =
             StringToErrorType.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
