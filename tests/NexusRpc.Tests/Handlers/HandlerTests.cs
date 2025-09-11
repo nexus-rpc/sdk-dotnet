@@ -145,16 +145,31 @@ public class HandlerTests : TestBase
         }
     }
 
+    public class InterceptCallTrackingMiddleware(string Name, IList<string> InterceptCalls) : IOperationMiddleware
+    {
+        public IOperationHandler<object?, object?> Intercept(
+            OperationContext context, IOperationHandler<object?, object?> nextHandler)
+        {
+            InterceptCalls.Add(Name);
+            return nextHandler;
+        }
+    }
+
     [Fact]
     public async Task Handler_AsyncResultAndMiddleware_Works()
     {
         var service = new SimpleAsyncService();
         // We'll also check middleware while we're here
         var middleware = new TrackingMiddleware();
+        var interceptCalls = new List<string>();
         var handler = new Handler(
             [ServiceHandlerInstance.FromInstance(service)],
             new NexusJsonSerializer(),
-            [middleware]);
+            [
+                middleware,
+                new InterceptCallTrackingMiddleware("second", interceptCalls),
+                new InterceptCallTrackingMiddleware("first", interceptCalls),
+            ]);
 
         // Make the 4 calls
         var startResult = await handler.StartOperationAsync(
@@ -166,6 +181,7 @@ public class HandlerTests : TestBase
             new(Encoding.UTF8.GetBytes("\"some-name\"")));
         Assert.Null(startResult.SyncResultValue);
         Assert.NotNull(startResult.AsyncOperationToken);
+        Assert.Equal(["first", "second"], interceptCalls);
         var result = await handler.FetchOperationResultAsync(new(
             Service: "SimpleService",
             Operation: "SayHello",

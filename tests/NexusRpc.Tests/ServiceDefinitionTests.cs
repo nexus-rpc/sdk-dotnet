@@ -131,10 +131,4 @@ public class ServiceDefinitionTests : TestBase
             }
         }
     }
-
-    /*
-    TODO:
-
-    * Invalid service/operation definitions
-    */
 }

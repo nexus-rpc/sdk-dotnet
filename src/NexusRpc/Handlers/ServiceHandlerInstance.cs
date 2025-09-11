@@ -112,7 +112,7 @@ namespace NexusRpc.Handlers
             }
             if (!method.IsPublic)
             {
-                throw new ArgumentException("Must be generic");
+                throw new ArgumentException("Must be public");
             }
 
             // Find definition by the method name
