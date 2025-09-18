@@ -1,0 +1,55 @@
+[*.cs]
+
+##### Nexus additions ######
+
+# Please keep in alphabetical order by field.
+
+# Don't care about test item visibility
+dotnet_diagnostic.CA1515.severity = none
+
+# Tests can have underscores in method names
+dotnet_diagnostic.CA1707.severity = none
+
+# Don't need to mark test classes sealed
+dotnet_diagnostic.CA1852.severity = none
+
+# Don't need to make array params static readonly for test performance
+dotnet_diagnostic.CA1861.severity = none
+
+# ConfigureAwait not needed in tests
+dotnet_diagnostic.CA2007.severity = none
+
+# Testing specific overloads is ok
+dotnet_diagnostic.CA2263.severity = none
+
+# Do not need docs in test project
+dotnet_diagnostic.CS1591.severity = none
+
+# Allow async methods to not have await in them
+dotnet_diagnostic.CS1998.severity = none
+
+# We're ok having parameters span lines in tests
+dotnet_diagnostic.SA1118.severity = none
+
+# To test lambda attributes, lambda and attribute share line
+dotnet_diagnostic.SA1134.severity = none
+
+# We want to have classes near their tests
+dotnet_diagnostic.SA1201.severity = none
+dotnet_diagnostic.SA1204.severity = none
+
+# We allow underscores as names and Rosyln devs won't fix
+# https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/2599
+dotnet_diagnostic.SA1313.severity = none
+
+# Do not need docs in test project
+dotnet_diagnostic.SA1600.severity = none
+dotnet_diagnostic.SA1602.severity = none
+
+# We move tasks around and wait on them later
+dotnet_diagnostic.VSTHRD003.severity = none
+
+# Do not need to suffix tests with "Async"
+dotnet_diagnostic.VSTHRD200.severity = none
+
+###############################

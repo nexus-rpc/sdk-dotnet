@@ -7,6 +7,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NexusRpc", "src\NexusRpc\NexusRpc.csproj", "{75829FF7-8A32-4DA5-B8C1-111E58A84F34}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NexusRpc.Tests", "tests\NexusRpc.Tests\NexusRpc.Tests.csproj", "{653C429C-AD03-4A6D-91EC-E68C79758333}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,11 +33,24 @@ Global
 		{75829FF7-8A32-4DA5-B8C1-111E58A84F34}.Release|x64.Build.0 = Release|Any CPU
 		{75829FF7-8A32-4DA5-B8C1-111E58A84F34}.Release|x86.ActiveCfg = Release|Any CPU
 		{75829FF7-8A32-4DA5-B8C1-111E58A84F34}.Release|x86.Build.0 = Release|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Debug|x64.Build.0 = Debug|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Debug|x86.Build.0 = Debug|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Release|Any CPU.Build.0 = Release|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Release|x64.ActiveCfg = Release|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Release|x64.Build.0 = Release|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Release|x86.ActiveCfg = Release|Any CPU
+		{653C429C-AD03-4A6D-91EC-E68C79758333}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{75829FF7-8A32-4DA5-B8C1-111E58A84F34} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{653C429C-AD03-4A6D-91EC-E68C79758333} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
