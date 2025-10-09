@@ -1,10 +1,14 @@
 # Nexus .NET SDK
 
+[![NuGet](https://img.shields.io/nuget/vpre/nexusrpc.svg?style=for-the-badge)](https://www.nuget.org/packages/NexusRpc)
+[![MIT](https://img.shields.io/github/license/nexus-rpc/sdk-dotnet.svg?style=for-the-badge)](LICENSE)
+[![API Docs](https://img.shields.io/badge/API_docs-blue?style=for-the-badge)](https://nexus-rpc.github.io/sdk-dotnet/)
+
 **⚠️ This SDK is currently at an experimental release stage. Backwards-incompatible changes are anticipated until a
 stable release is announced. ⚠️**
 
 .NET SDK for working with [Nexus RPC](https://github.com/nexus-rpc/api). See
-[API documentation](https://nexus-rpc.github.io/sdk-dotnet/)
+[API documentation](https://nexus-rpc.github.io/sdk-dotnet/).
 
 ## What is Nexus?
 
