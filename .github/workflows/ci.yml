@@ -19,8 +19,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -31,6 +29,11 @@ jobs:
 
       - name: Build
         run: dotnet build
+
+      - name: Build docs
+        run: |
+          dotnet tool update -g docfx
+          docfx src/NexusRpc/docs/docfx.json --warningsAsErrors
 
       - name: Test
         run: dotnet test --logger "console;verbosity=detailed"
