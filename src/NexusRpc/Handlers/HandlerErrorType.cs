@@ -35,6 +35,19 @@ namespace NexusRpc.Handlers
         NotFound,
 
         /// <summary>
+        /// Returned by the server to when it has given up handling a request. The may occur by enforcing a client
+        /// provided `Request-Timeout` or for any arbitrary reason such as enforcing some configurable limit. Subsequent
+        /// requests by the client are permissible.
+        /// </summary>
+        RequestTimeout,
+
+        /// <summary>
+        /// The request could not be made due to a conflict. The may happen when trying to create an operation that
+        /// has already been started. Clients should not retry this request unless advised otherwise.
+        /// </summary>
+        Conflict,
+
+        /// <summary>
         /// Some resource has been exhausted, perhaps a per-user quota, or perhaps the entire file
         /// system is out of space. Subsequent requests by the client are permissible.
         /// </summary>
