@@ -87,12 +87,6 @@ namespace NexusRpc.Handlers
                 return OperationStartResult.SyncResult(result);
             }
 
-            public Task<TResult> FetchResultAsync(OperationFetchResultContext context) =>
-                throw new NotImplementedException("Not supported on sync operation");
-
-            public Task<OperationInfo> FetchInfoAsync(OperationFetchInfoContext context) =>
-                throw new NotImplementedException("Not supported on sync operation");
-
             public Task CancelAsync(OperationCancelContext context) =>
                 throw new NotImplementedException("Not supported on sync operation");
         }
@@ -118,12 +112,6 @@ namespace NexusRpc.Handlers
                 var result = await Underlying.StartAsync(context, typedInput).ConfigureAwait(false);
                 return new(result.SyncResultValue, result.AsyncOperationToken);
             }
-
-            public async Task<object?> FetchResultAsync(OperationFetchResultContext context) =>
-                await Underlying.FetchResultAsync(context).ConfigureAwait(false);
-
-            public Task<OperationInfo> FetchInfoAsync(OperationFetchInfoContext context) =>
-                Underlying.FetchInfoAsync(context);
 
             public Task CancelAsync(OperationCancelContext context) =>
                 Underlying.CancelAsync(context);

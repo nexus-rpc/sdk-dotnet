@@ -77,7 +77,7 @@ public class GreetingService(IApiClient ApiClient)
 
     [NexusOperationHandler]
     public IOperationHandler<string, string> SayHello2() =>
-        // Advanced, potentially asynchronous operations can 
+        // Advanced, potentially asynchronous operations can
         new SayHello2Handler(ApiClient);
 
     public class  SayHello2Handler(IApiClient ApiClient) : IOperationHandler<string, string>
@@ -86,11 +86,6 @@ public class GreetingService(IApiClient ApiClient)
             OperationStartContext context, string name) =>
             throw new NotImplementedException("Excluded for brevity");
 
-        public Task<string> FetchResultAsync(OperationFetchResultContext context) =>
-            throw new NotImplementedException("Excluded for brevity");
-
-        public Task<OperationInfo> FetchInfoAsync(OperationFetchInfoContext context) =>
-            throw new NotImplementedException("Excluded for brevity");
 
         public Task CancelAsync(OperationCancelContext context) =>
             throw new NotImplementedException("Excluded for brevity");
@@ -104,8 +99,8 @@ public class GreetingService(IApiClient ApiClient)
 
 Prerequisites:
 
-* [.NET](https://learn.microsoft.com/en-us/dotnet/core/install/)
-* This repository cloned
+- [.NET](https://learn.microsoft.com/en-us/dotnet/core/install/)
+- This repository cloned
 
 With all prerequisites in place, run:
 
@@ -131,8 +126,8 @@ Run:
 
 Can add options like:
 
-* `--logger "console;verbosity=detailed"` to show logs
-* `--filter "FullyQualifiedName=NexusRpc.Tests.ServiceDefinitionTests.FromType_NonInterface_Bad"` to run a
+- `--logger "console;verbosity=detailed"` to show logs
+- `--filter "FullyQualifiedName=NexusRpc.Tests.ServiceDefinitionTests.FromType_NonInterface_Bad"` to run a
   specific test
 
 To help show full stdout/stderr, this is also available as an in-proc test program. Run:

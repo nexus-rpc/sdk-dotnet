@@ -39,25 +39,6 @@ namespace NexusRpc.Handlers
             TInput input);
 
         /// <summary>
-        /// Fetch operation result, waiting if necessary.
-        /// </summary>
-        /// <param name="context">Context.</param>
-        /// <returns>Task with result contents.</returns>
-        /// <exception cref="OperationStillRunningException">Operation still running (after optional
-        /// wait).</exception>
-        /// <exception cref="OperationException">Operation failed.</exception>
-        /// <exception cref="HandlerException">Unexpected handler failure.</exception>
-        Task<TResult> FetchResultAsync(OperationFetchResultContext context);
-
-        /// <summary>
-        /// Fetch operation info.
-        /// </summary>
-        /// <param name="context">Context.</param>
-        /// <returns>Task with operation info.</returns>
-        /// <exception cref="HandlerException">Unexpected handler failure.</exception>
-        Task<OperationInfo> FetchInfoAsync(OperationFetchInfoContext context);
-
-        /// <summary>
         /// Request operation cancel.
         /// </summary>
         /// <param name="context">Context.</param>
