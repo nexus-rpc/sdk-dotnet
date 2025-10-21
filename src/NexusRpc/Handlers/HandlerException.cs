@@ -16,6 +16,8 @@ namespace NexusRpc.Handlers
             ["UNAUTHENTICATED"] = HandlerErrorType.Unauthenticated,
             ["UNAUTHORIZED"] = HandlerErrorType.Unauthorized,
             ["NOT_FOUND"] = HandlerErrorType.NotFound,
+            ["REQUEST_TIMEOUT"] = HandlerErrorType.RequestTimeout,
+            ["CONFLICT"] = HandlerErrorType.Conflict,
             ["RESOURCE_EXHAUSTED"] = HandlerErrorType.ResourceExhausted,
             ["INTERNAL"] = HandlerErrorType.Internal,
             ["NOT_IMPLEMENTED"] = HandlerErrorType.NotImplemented,
@@ -32,6 +34,7 @@ namespace NexusRpc.Handlers
                 HandlerErrorType.Unauthenticated,
                 HandlerErrorType.Unauthorized,
                 HandlerErrorType.NotFound,
+                HandlerErrorType.Conflict,
                 HandlerErrorType.NotImplemented,
             };
 
