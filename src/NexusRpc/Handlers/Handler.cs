@@ -97,39 +97,6 @@ namespace NexusRpc.Handlers
         }
 
         /// <inheritdoc/>
-        public async Task<HandlerContent> FetchOperationResultAsync(OperationFetchResultContext context)
-        {
-            // Get handler
-            var instance = GetInstance(context);
-            var handler = GetInterceptedHandler(context, instance);
-            var opDef = instance.Definition.Operations[context.Operation];
-
-            // Fetch result
-            var result = await handler.FetchResultAsync(context).ConfigureAwait(false);
-
-            // Change sync result value to NoValue if return type is void
-            if (opDef.OutputType == typeof(void))
-            {
-                result = default(NoValue);
-            }
-
-            // Serialize
-            var resultContent = await serializer.SerializeAsync(result).ConfigureAwait(false);
-            return new(resultContent.Data, resultContent.Headers);
-        }
-
-        /// <inheritdoc/>
-        public Task<OperationInfo> FetchOperationInfoAsync(OperationFetchInfoContext context)
-        {
-            // Get handler
-            var instance = GetInstance(context);
-            var handler = GetInterceptedHandler(context, instance);
-
-            // Return info
-            return handler.FetchInfoAsync(context);
-        }
-
-        /// <inheritdoc/>
         public Task CancelOperationAsync(OperationCancelContext context)
         {
             // Get handler

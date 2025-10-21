@@ -77,19 +77,13 @@ public class GreetingService(IApiClient ApiClient)
 
     [NexusOperationHandler]
     public IOperationHandler<string, string> SayHello2() =>
-        // Advanced, potentially asynchronous operations can 
+        // Advanced, potentially asynchronous operations
         new SayHello2Handler(ApiClient);
 
     public class  SayHello2Handler(IApiClient ApiClient) : IOperationHandler<string, string>
     {
         public Task<OperationStartResult<string>> StartAsync(
             OperationStartContext context, string name) =>
-            throw new NotImplementedException("Excluded for brevity");
-
-        public Task<string> FetchResultAsync(OperationFetchResultContext context) =>
-            throw new NotImplementedException("Excluded for brevity");
-
-        public Task<OperationInfo> FetchInfoAsync(OperationFetchInfoContext context) =>
             throw new NotImplementedException("Excluded for brevity");
 
         public Task CancelAsync(OperationCancelContext context) =>

@@ -50,19 +50,7 @@ public class HandlerTests : TestBase
             "\"Hello, some-name\"",
             Encoding.UTF8.GetString(result.SyncResultValue!.ConsumeAllBytes()));
 
-        // Ensure other operation calls fail
-        await Assert.ThrowsAsync<NotImplementedException>(() =>
-            handler.FetchOperationResultAsync(new(
-                Service: "SimpleService",
-                Operation: "SayHello",
-                CancellationToken: default,
-                OperationToken: Guid.NewGuid().ToString())));
-        await Assert.ThrowsAsync<NotImplementedException>(() =>
-            handler.FetchOperationInfoAsync(new(
-                Service: "SimpleService",
-                Operation: "SayHello",
-                CancellationToken: default,
-                OperationToken: Guid.NewGuid().ToString())));
+        // Ensure cancel operation call fails
         await Assert.ThrowsAsync<NotImplementedException>(() =>
             handler.CancelOperationAsync(new(
                 Service: "SimpleService",
@@ -88,19 +76,6 @@ public class HandlerTests : TestBase
                 return OperationStartResult.AsyncResult<string>($"{input}-token");
             }
 
-            public async Task<string> FetchResultAsync(OperationFetchResultContext context)
-            {
-                Calls.Add(context);
-                var name = context.OperationToken.Substring(0, context.OperationToken.Length - "-token".Length);
-                return $"Hello, {name}";
-            }
-
-            public async Task<OperationInfo> FetchInfoAsync(OperationFetchInfoContext context)
-            {
-                Calls.Add(context);
-                return new(context.OperationToken, OperationState.Running);
-            }
-
             public async Task CancelAsync(OperationCancelContext context) =>
                 Calls.Add(context);
         }
@@ -123,18 +98,6 @@ public class HandlerTests : TestBase
             {
                 Calls.Add(context);
                 return Next.StartAsync(context, input);
-            }
-
-            public Task<object?> FetchResultAsync(OperationFetchResultContext context)
-            {
-                Calls.Add(context);
-                return Next.FetchResultAsync(context);
-            }
-
-            public Task<OperationInfo> FetchInfoAsync(OperationFetchInfoContext context)
-            {
-                Calls.Add(context);
-                return Next.FetchInfoAsync(context);
             }
 
             public Task CancelAsync(OperationCancelContext context)
@@ -171,7 +134,7 @@ public class HandlerTests : TestBase
                 new InterceptCallTrackingMiddleware("first", interceptCalls),
             ]);
 
-        // Make the 4 calls
+        // Make the 2 calls
         var startResult = await handler.StartOperationAsync(
             new(
                 Service: "SimpleService",
@@ -182,21 +145,6 @@ public class HandlerTests : TestBase
         Assert.Null(startResult.SyncResultValue);
         Assert.NotNull(startResult.AsyncOperationToken);
         Assert.Equal(["first", "second"], interceptCalls);
-        var result = await handler.FetchOperationResultAsync(new(
-            Service: "SimpleService",
-            Operation: "SayHello",
-            CancellationToken: default,
-            OperationToken: startResult.AsyncOperationToken));
-        Assert.Equal(
-            "\"Hello, some-name\"",
-            Encoding.UTF8.GetString(result.ConsumeAllBytes()));
-        var infoResult = await handler.FetchOperationInfoAsync(new(
-            Service: "SimpleService",
-            Operation: "SayHello",
-            CancellationToken: default,
-            OperationToken: startResult.AsyncOperationToken));
-        Assert.Equal(startResult.AsyncOperationToken, infoResult.Token);
-        Assert.Equal(OperationState.Running, infoResult.State);
         await handler.CancelOperationAsync(new(
             Service: "SimpleService",
             Operation: "SayHello",
@@ -206,11 +154,10 @@ public class HandlerTests : TestBase
         // Confirm contexts
         void AssertCalls(ICollection<OperationContext> calls)
         {
-            Assert.Equal(4, calls.Count);
+            Assert.Equal(2, calls.Count);
             Assert.Equal(
                 [
-                    typeof(OperationStartContext), typeof(OperationFetchResultContext),
-                    typeof(OperationFetchInfoContext), typeof(OperationCancelContext),
+                    typeof(OperationStartContext), typeof(OperationCancelContext),
                 ],
                 service.Calls.Select(c => c.GetType()).ToList());
             Assert.All(calls, call => Assert.Equal("SimpleService", call.Service));
@@ -234,7 +181,7 @@ public class HandlerTests : TestBase
             });
         var handler = new Handler([instance], new NexusJsonSerializer());
 
-        // Start and check result
+        // Start operation
         var startResult = await handler.StartOperationAsync(
             new(
                 Service: "ManualService",
@@ -243,14 +190,6 @@ public class HandlerTests : TestBase
                 RequestId: Guid.NewGuid().ToString()),
             new(Encoding.UTF8.GetBytes("\"some-name\"")));
         Assert.NotNull(startResult.AsyncOperationToken);
-        var result = await handler.FetchOperationResultAsync(new(
-            Service: "ManualService",
-            Operation: "ManualSayHello",
-            CancellationToken: default,
-            OperationToken: startResult.AsyncOperationToken));
-        Assert.Equal(
-            "\"Hello, some-name\"",
-            Encoding.UTF8.GetString(result.ConsumeAllBytes()));
     }
 
     [Fact]
@@ -304,12 +243,6 @@ public class HandlerTests : TestBase
                 OperationStartContext context, NoValue input) =>
                 OperationStartResult.SyncResult(default(NoValue));
 
-            public async Task<NoValue> FetchResultAsync(
-                OperationFetchResultContext context) => default;
-
-            public Task<OperationInfo> FetchInfoAsync(
-                OperationFetchInfoContext context) => throw new NotImplementedException();
-
             public Task CancelAsync(
                 OperationCancelContext context) => throw new NotImplementedException();
         }
@@ -332,16 +265,8 @@ public class HandlerTests : TestBase
              new(Array.Empty<byte>()));
         Assert.Empty(startResult.SyncResultValue!.ConsumeAllBytes());
 
-        var result = await handler.FetchOperationResultAsync(
-             new(
-                Service: "VoidService",
-                Operation: "NoReturnNoParam",
-                CancellationToken: default,
-                OperationToken: Guid.NewGuid().ToString()));
-        Assert.Empty(result.ConsumeAllBytes());
-
-        // Check that serialize was called with the start and fetch results
-        Assert.Equal([default(NoValue), default(NoValue)], serializer.SerializeCalls.ToArray());
+        // Check that serialize was called with the start result
+        Assert.Equal([default(NoValue)], serializer.SerializeCalls.ToArray());
 
         // Check that deserialize was called with the start param
         var (content, type) = serializer.DeserializeCalls.Single();
