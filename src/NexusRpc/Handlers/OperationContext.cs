@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -47,5 +48,11 @@ namespace NexusRpc.Handlers
         /// This dictionary is expected to compare keys case-insensitively.
         /// </remarks>
         public IReadOnlyDictionary<string, string>? Headers { get; init; }
+
+        /// <summary>
+        /// Gets the deadline for the operation handler method. This is the time by which the method should
+        /// complete. This is not the operation's deadline.
+        /// </summary>
+        public DateTime? RequestDeadline { get; init; }
     }
 }
