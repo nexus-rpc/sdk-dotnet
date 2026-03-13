@@ -32,7 +32,7 @@ jobs:
 
       - name: Build docs
         run: |
-          dotnet tool update -g docfx
+          dotnet tool update -g docfx --version "2.77.*"
           docfx src/NexusRpc/docs/docfx.json --warningsAsErrors
 
       - name: Test
