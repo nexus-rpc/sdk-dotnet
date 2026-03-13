@@ -38,6 +38,8 @@ namespace NexusRpc.Handlers
                 HandlerErrorType.NotImplemented,
             };
 
+        private readonly string? stackTraceOverride;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="HandlerException"/> class.
         /// </summary>
@@ -59,16 +61,22 @@ namespace NexusRpc.Handlers
         /// <param name="message">Message.</param>
         /// <param name="innerException">Inner exception.</param>
         /// <param name="errorRetryBehavior">Error retry behavior.</param>
+        /// <param name="stackTrace">Optional stack trace string.</param>
+        /// <param name="originalFailure">Optional original failure information.</param>
         public HandlerException(
             HandlerErrorType errorType,
             string message,
             Exception? innerException,
-            HandlerErrorRetryBehavior errorRetryBehavior = HandlerErrorRetryBehavior.Unspecified)
+            HandlerErrorRetryBehavior errorRetryBehavior = HandlerErrorRetryBehavior.Unspecified,
+            string? stackTrace = null,
+            Failure? originalFailure = null)
             : base(message, innerException)
         {
             RawErrorType = ErrorTypeToString.TryGetValue(errorType, out var v) ? v : "UNKNOWN";
             ErrorType = errorType;
             ErrorRetryBehavior = errorRetryBehavior;
+            stackTraceOverride = stackTrace;
+            OriginalFailure = originalFailure;
         }
 
         /// <summary>
@@ -82,16 +90,22 @@ namespace NexusRpc.Handlers
         /// <param name="message">Message.</param>
         /// <param name="innerException">Inner exception.</param>
         /// <param name="errorRetryBehavior">Error retry behavior.</param>
+        /// <param name="stackTrace">Optional stack trace string.</param>
+        /// <param name="originalFailure">Optional original failure information.</param>
         public HandlerException(
             string rawErrorType,
             string message,
             Exception? innerException,
-            HandlerErrorRetryBehavior errorRetryBehavior = HandlerErrorRetryBehavior.Unspecified)
+            HandlerErrorRetryBehavior errorRetryBehavior = HandlerErrorRetryBehavior.Unspecified,
+            string? stackTrace = null,
+            Failure? originalFailure = null)
             : base(message, innerException)
         {
             RawErrorType = rawErrorType;
             ErrorType = StringToErrorType.TryGetValue(rawErrorType, out var v) ? v : HandlerErrorType.Unknown;
             ErrorRetryBehavior = errorRetryBehavior;
+            stackTraceOverride = stackTrace;
+            OriginalFailure = originalFailure;
         }
 
         /// <summary>
@@ -108,6 +122,17 @@ namespace NexusRpc.Handlers
         /// Gets the error retry behavior.
         /// </summary>
         public HandlerErrorRetryBehavior ErrorRetryBehavior { get; private init; }
+
+        /// <summary>
+        /// Gets the stack trace. If an explicit stack trace was provided, returns that;
+        /// otherwise returns the runtime stack trace.
+        /// </summary>
+        public override string? StackTrace => stackTraceOverride ?? base.StackTrace;
+
+        /// <summary>
+        /// Gets the optional original failure information.
+        /// </summary>
+        public Failure? OriginalFailure { get; private init; }
 
         /// <summary>
         /// Gets a value indicating whether the error should be retried.
