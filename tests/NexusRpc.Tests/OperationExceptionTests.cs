@@ -24,7 +24,7 @@ public class OperationExceptionTests
     [Fact]
     public void CreateFailedWithOriginalFailure()
     {
-        var failure = new Failure("root cause");
+        var failure = new FailureInfo("root cause");
         var ex = OperationException.CreateFailed("fail", originalFailure: failure);
         Assert.Equal(OperationState.Failed, ex.State);
         Assert.Same(failure, ex.OriginalFailure);
@@ -33,7 +33,7 @@ public class OperationExceptionTests
     [Fact]
     public void CreateCanceledWithOriginalFailure()
     {
-        var failure = new Failure("canceled cause");
+        var failure = new FailureInfo("canceled cause");
         var ex = OperationException.CreateCanceled("canceled", originalFailure: failure);
         Assert.Equal(OperationState.Canceled, ex.State);
         Assert.Same(failure, ex.OriginalFailure);
@@ -64,7 +64,7 @@ public class OperationExceptionTests
     public void CreateFailedWithInnerExceptionAndAllFields()
     {
         var inner = new InvalidOperationException("inner");
-        var failure = new Failure("info");
+        var failure = new FailureInfo("info");
         var ex = OperationException.CreateFailed(
             "fail",
             innerException: inner,
@@ -80,7 +80,7 @@ public class OperationExceptionTests
     public void CreateCanceledWithInnerExceptionAndAllFields()
     {
         var inner = new OperationCanceledException("canceled");
-        var failure = new Failure("info");
+        var failure = new FailureInfo("info");
         var ex = OperationException.CreateCanceled(
             "canceled",
             innerException: inner,
@@ -90,5 +90,38 @@ public class OperationExceptionTests
         Assert.Same(inner, ex.InnerException);
         Assert.Equal("remote trace", ex.StackTrace);
         Assert.Same(failure, ex.OriginalFailure);
+    }
+
+    [Fact]
+    public void ThrownWithOverrideStillReturnsOverride()
+    {
+        OperationException caught;
+        try
+        {
+            throw OperationException.CreateFailed("fail", stackTrace: "remote trace");
+        }
+        catch (OperationException ex)
+        {
+            caught = ex;
+        }
+
+        Assert.Equal("remote trace", caught.StackTrace);
+    }
+
+    [Fact]
+    public void ThrownWithoutOverrideReturnsRuntimeTrace()
+    {
+        OperationException caught;
+        try
+        {
+            throw OperationException.CreateFailed("fail");
+        }
+        catch (OperationException ex)
+        {
+            caught = ex;
+        }
+
+        Assert.NotNull(caught.StackTrace);
+        Assert.Contains("OperationExceptionTests", caught.StackTrace);
     }
 }

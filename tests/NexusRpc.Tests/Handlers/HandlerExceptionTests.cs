@@ -23,7 +23,7 @@ public class HandlerExceptionTests
     [Fact]
     public void EnumConstructorSetsOriginalFailure()
     {
-        var failure = new Failure("root cause");
+        var failure = new FailureInfo("root cause");
         var ex = new HandlerException(
             HandlerErrorType.Internal,
             "fail",
@@ -35,7 +35,7 @@ public class HandlerExceptionTests
     [Fact]
     public void StringConstructorSetsOriginalFailure()
     {
-        var failure = new Failure("root cause");
+        var failure = new FailureInfo("root cause");
         var ex = new HandlerException(
             "BAD_REQUEST",
             "fail",
@@ -93,7 +93,7 @@ public class HandlerExceptionTests
             HandlerErrorType.BadRequest,
             "bad",
             null,
-            originalFailure: new Failure("info"));
+            originalFailure: new FailureInfo("info"));
         Assert.Equal(HandlerErrorType.BadRequest, ex.ErrorType);
         Assert.Equal("BAD_REQUEST", ex.RawErrorType);
         Assert.False(ex.IsRetryable);
@@ -106,5 +106,42 @@ public class HandlerExceptionTests
         Assert.Equal(HandlerErrorType.Unknown, ex.ErrorType);
         Assert.Equal("CUSTOM_ERROR", ex.RawErrorType);
         Assert.True(ex.IsRetryable);
+    }
+
+    [Fact]
+    public void ThrownWithOverrideStillReturnsOverride()
+    {
+        HandlerException caught;
+        try
+        {
+            throw new HandlerException(
+                HandlerErrorType.Internal,
+                "fail",
+                null,
+                stackTrace: "remote trace");
+        }
+        catch (HandlerException ex)
+        {
+            caught = ex;
+        }
+
+        Assert.Equal("remote trace", caught.StackTrace);
+    }
+
+    [Fact]
+    public void ThrownWithoutOverrideReturnsRuntimeTrace()
+    {
+        HandlerException caught;
+        try
+        {
+            throw new HandlerException(HandlerErrorType.Internal, "fail");
+        }
+        catch (HandlerException ex)
+        {
+            caught = ex;
+        }
+
+        Assert.NotNull(caught.StackTrace);
+        Assert.Contains("HandlerExceptionTests", caught.StackTrace);
     }
 }

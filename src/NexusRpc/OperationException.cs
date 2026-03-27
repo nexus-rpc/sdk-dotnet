@@ -14,7 +14,7 @@ namespace NexusRpc
             string message,
             Exception? innerException,
             string? stackTrace = null,
-            Failure? originalFailure = null)
+            FailureInfo? originalFailure = null)
             : base(message, innerException)
         {
             State = state;
@@ -36,7 +36,7 @@ namespace NexusRpc
         /// <summary>
         /// Gets the optional original failure information.
         /// </summary>
-        public Failure? OriginalFailure { get; private init; }
+        public FailureInfo? OriginalFailure { get; private init; }
 
         /// <summary>
         /// Create an operation exception representing an operation failure.
@@ -50,7 +50,7 @@ namespace NexusRpc
             string message,
             Exception? innerException = null,
             string? stackTrace = null,
-            Failure? originalFailure = null) =>
+            FailureInfo? originalFailure = null) =>
             new(OperationState.Failed, message, innerException, stackTrace, originalFailure);
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace NexusRpc
             string message,
             Exception? innerException = null,
             string? stackTrace = null,
-            Failure? originalFailure = null) =>
+            FailureInfo? originalFailure = null) =>
             new(OperationState.Canceled, message, innerException, stackTrace, originalFailure);
     }
 }

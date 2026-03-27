@@ -69,7 +69,7 @@ namespace NexusRpc.Handlers
             Exception? innerException,
             HandlerErrorRetryBehavior errorRetryBehavior = HandlerErrorRetryBehavior.Unspecified,
             string? stackTrace = null,
-            Failure? originalFailure = null)
+            FailureInfo? originalFailure = null)
             : base(message, innerException)
         {
             RawErrorType = ErrorTypeToString.TryGetValue(errorType, out var v) ? v : "UNKNOWN";
@@ -98,7 +98,7 @@ namespace NexusRpc.Handlers
             Exception? innerException,
             HandlerErrorRetryBehavior errorRetryBehavior = HandlerErrorRetryBehavior.Unspecified,
             string? stackTrace = null,
-            Failure? originalFailure = null)
+            FailureInfo? originalFailure = null)
             : base(message, innerException)
         {
             RawErrorType = rawErrorType;
@@ -132,7 +132,7 @@ namespace NexusRpc.Handlers
         /// <summary>
         /// Gets the optional original failure information.
         /// </summary>
-        public Failure? OriginalFailure { get; private init; }
+        public FailureInfo? OriginalFailure { get; private init; }
 
         /// <summary>
         /// Gets a value indicating whether the error should be retried.
