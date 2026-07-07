@@ -3,6 +3,7 @@
 
 namespace NexusRpc.Tests.Handlers;
 
+using System.Reflection;
 using NexusRpc.Handlers;
 using Xunit;
 using Xunit.Abstractions;
@@ -179,6 +180,88 @@ public class ServiceHandlerInstanceTests : TestBase
             Assert.Single(ServiceHandlerInstance.FromInstance(
                 new OperationStatic()).OperationHandlers).Key);
 
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class MarkerAttribute : Attribute
+    {
+    }
+
+    [NexusServiceHandler(typeof(ISimpleService))]
+    public class OperationViaExtension
+    {
+        [Marker]
+        public string DoSomething(string input) => throw new NotImplementedException();
+    }
+
+    [Fact]
+    public void FromInstance_WithExtension_UsesExtensionHandler() =>
+        Assert.Equal(
+            "DoSomething",
+            Assert.Single(ServiceHandlerInstance.FromInstance(
+                new OperationViaExtension(),
+                new IMethodExtension[] { new MarkerExtension() }).OperationHandlers).Key);
+
+    [NexusServiceHandler(typeof(ISimpleService))]
+    public class OperationHandlerAndExtension
+    {
+        [NexusOperationHandler]
+        [Marker]
+        public IOperationHandler<string, string> DoSomething() =>
+            OperationHandler.Sync<string, string>((ctx, input) => "builtin");
+    }
+
+    [Fact]
+    public void FromInstance_MethodHasBothAttrs_BuiltInWins()
+    {
+        // If [NexusOperationHandler] is present, extension is not consulted for that method.
+        var instance = ServiceHandlerInstance.FromInstance(
+            new OperationHandlerAndExtension(),
+            new IMethodExtension[] { new MarkerExtension() });
+        Assert.Equal("DoSomething", Assert.Single(instance.OperationHandlers).Key);
+    }
+
+    [NexusServiceHandler(typeof(ISimpleService))]
+    public class TwoExtensionsSameName
+    {
+        [Marker]
+        public string DoSomething(string input) => throw new NotImplementedException();
+    }
+
+    [Fact]
+    public void FromInstance_TwoExtensionsClaimSameMethod_FirstWins()
+    {
+        // First extension in the list to claim the method wins; subsequent extensions are not
+        // consulted for that method.
+        var instance = ServiceHandlerInstance.FromInstance(
+            new TwoExtensionsSameName(),
+            new IMethodExtension[]
+            {
+                new MarkerExtension(opName =>
+                    OperationHandler.WrapAsGenericHandler(
+                        OperationHandler.Sync<string, string>((ctx, input) => "first"))),
+                new MarkerExtension(opName =>
+                    OperationHandler.WrapAsGenericHandler(
+                        OperationHandler.Sync<string, string>((ctx, input) => "second"))),
+            });
+        Assert.Equal("DoSomething", Assert.Single(instance.OperationHandlers).Key);
+    }
+
+    [NexusServiceHandler(typeof(ISimpleService))]
+    public class ExtensionUnknownOp
+    {
+        [Marker]
+        public string DoesNotExist(string input) => throw new NotImplementedException();
+    }
+
+    [Fact]
+    public void FromInstance_ExtensionUnknownOperation_Bad()
+    {
+        var exc = Assert.Throws<ArgumentException>(() =>
+            ServiceHandlerInstance.FromInstance(
+                new ExtensionUnknownOp(),
+                new IMethodExtension[] { new UnknownNameExtension() }));
+        Assert.Contains("unknown operation 'not-in-service'", exc.Message);
+    }
+
     private static void AssertBadInstance(object instance, params string[] anyErrorContains)
     {
         try
@@ -195,6 +278,46 @@ public class ServiceHandlerInstanceTests : TestBase
                     Assert.Fail($"'{v}' not in ${e}");
                 }
             }
+        }
+    }
+
+    private sealed class MarkerExtension : IMethodExtension
+    {
+        private readonly Func<string, IOperationHandler<object?, object?>>? handlerFactory;
+
+        public MarkerExtension(Func<string, IOperationHandler<object?, object?>>? factory = null) =>
+            handlerFactory = factory;
+
+        public MethodExtensionResult? Extract(
+            object instance, MethodInfo method, ServiceDefinition serviceDefinition)
+        {
+            if (method.GetCustomAttribute<MarkerAttribute>() == null)
+            {
+                return null;
+            }
+            var opName = serviceDefinition.Operations.Values
+                .First(o => o.MethodInfo?.Name == method.Name).Name;
+            var handler = handlerFactory != null
+                ? handlerFactory(opName)
+                : OperationHandler.WrapAsGenericHandler(
+                    OperationHandler.Sync<string, string>((ctx, input) => $"marker: {input}"));
+            return new MethodExtensionResult(opName, handler);
+        }
+    }
+
+    private sealed class UnknownNameExtension : IMethodExtension
+    {
+        public MethodExtensionResult? Extract(
+            object instance, MethodInfo method, ServiceDefinition serviceDefinition)
+        {
+            if (method.GetCustomAttribute<MarkerAttribute>() == null)
+            {
+                return null;
+            }
+            return new MethodExtensionResult(
+                "not-in-service",
+                OperationHandler.WrapAsGenericHandler(
+                    OperationHandler.Sync<string, string>((ctx, input) => "unused")));
         }
     }
 }
