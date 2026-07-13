@@ -246,20 +246,22 @@ public class ServiceHandlerInstanceTests : TestBase
     }
 
     [NexusServiceHandler(typeof(ISimpleService))]
-    public class ExtensionUnknownOp
+    public class ExtensionMethodNotAnOperation
     {
         [Marker]
         public string DoesNotExist(string input) => throw new NotImplementedException();
     }
 
     [Fact]
-    public void FromInstance_ExtensionUnknownOperation_Bad()
+    public void FromInstance_ExtensionMethodNotAnOperation_Bad()
     {
+        // A recognized method whose name does not map to any operation is not consulted, so the
+        // service is left without a handler for its declared operation.
         var exc = Assert.Throws<ArgumentException>(() =>
             ServiceHandlerInstance.FromInstance(
-                new ExtensionUnknownOp(),
-                new IMethodExtension[] { new UnknownNameExtension() }));
-        Assert.Contains("unknown operation 'not-in-service'", exc.Message);
+                new ExtensionMethodNotAnOperation(),
+                new IMethodExtension[] { new MarkerExtension() }));
+        Assert.Contains("Missing handlers for defined operations", exc.Message);
     }
 
     private static void AssertBadInstance(object instance, params string[] anyErrorContains)
@@ -288,36 +290,17 @@ public class ServiceHandlerInstanceTests : TestBase
         public MarkerExtension(Func<string, IOperationHandler<object?, object?>>? factory = null) =>
             handlerFactory = factory;
 
-        public MethodExtensionResult? Extract(
-            object instance, MethodInfo method, ServiceDefinition serviceDefinition)
+        public IOperationHandler<object?, object?>? Extract(
+            object instance, MethodInfo method, OperationDefinition operationDefinition)
         {
             if (method.GetCustomAttribute<MarkerAttribute>() == null)
             {
                 return null;
             }
-            var opName = serviceDefinition.Operations.Values
-                .First(o => o.MethodInfo?.Name == method.Name).Name;
-            var handler = handlerFactory != null
-                ? handlerFactory(opName)
+            return handlerFactory != null
+                ? handlerFactory(operationDefinition.Name)
                 : OperationHandler.WrapAsGenericHandler(
                     OperationHandler.Sync<string, string>((ctx, input) => $"marker: {input}"));
-            return new MethodExtensionResult(opName, handler);
-        }
-    }
-
-    private sealed class UnknownNameExtension : IMethodExtension
-    {
-        public MethodExtensionResult? Extract(
-            object instance, MethodInfo method, ServiceDefinition serviceDefinition)
-        {
-            if (method.GetCustomAttribute<MarkerAttribute>() == null)
-            {
-                return null;
-            }
-            return new MethodExtensionResult(
-                "not-in-service",
-                OperationHandler.WrapAsGenericHandler(
-                    OperationHandler.Sync<string, string>((ctx, input) => "unused")));
         }
     }
 }

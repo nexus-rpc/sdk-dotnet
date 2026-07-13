@@ -110,34 +110,36 @@ namespace NexusRpc.Handlers
                     }
                     continue;
                 }
+                // The method is an operation only if it maps by name to one on the service. Skip
+                // methods that don't; extensions are consulted only for real operations.
+                var opDef = serviceDef.Operations.Values
+                    .FirstOrDefault(o => o.MethodInfo?.Name == method.Name);
+                if (opDef == null)
+                {
+                    continue;
+                }
                 foreach (var extension in methodExtensions)
                 {
-                    MethodExtensionResult? result;
+                    IOperationHandler<object?, object?>? handler;
                     try
                     {
-                        result = extension.Extract(instance, method, serviceDef);
+                        handler = extension.Extract(instance, method, opDef);
                     }
                     catch (Exception e)
                     {
                         throw new ArgumentException(
                             $"Failed obtaining operation handler from {method.Name}", e);
                     }
-                    if (result == null)
+                    if (handler == null)
                     {
                         continue;
                     }
-                    if (!serviceDef.Operations.ContainsKey(result.OperationName))
+                    if (opHandlers.ContainsKey(opDef.Name))
                     {
                         throw new ArgumentException(
-                            $"Extension {extension.GetType().Name} produced handler for unknown " +
-                            $"operation '{result.OperationName}' on service '{serviceDef.Name}'");
+                            $"Duplicate operation handler for operation '{opDef.Name}'");
                     }
-                    if (opHandlers.ContainsKey(result.OperationName))
-                    {
-                        throw new ArgumentException(
-                            $"Duplicate operation handler for operation '{result.OperationName}'");
-                    }
-                    opHandlers[result.OperationName] = result.Handler;
+                    opHandlers[opDef.Name] = handler;
                     break;
                 }
             }
