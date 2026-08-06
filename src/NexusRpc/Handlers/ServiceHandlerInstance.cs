@@ -7,7 +7,7 @@ namespace NexusRpc.Handlers
 {
     /// <summary>
     /// Representation of a service handler instance with instantiated operation handlers. Users
-    /// should use <see cref="FromInstance"/> to get an instance.
+    /// should use <see cref="FromInstance(object)"/> to get an instance.
     /// </summary>
     public class ServiceHandlerInstance
     {
@@ -18,7 +18,7 @@ namespace NexusRpc.Handlers
         /// <param name="operationHandlers">All instantiated operation handlers, keyed by operation
         /// name.</param>
         /// <remarks>
-        /// This is not commonly used, users should prefer <see cref="FromInstance"/> with an
+        /// This is not commonly used, users should prefer <see cref="FromInstance(object)"/> with an
         /// instantiated instance of a class with a <see cref="NexusServiceHandlerAttribute"/>
         /// attribute. This constructor does minimal validation on operation handlers.
         /// </remarks>
@@ -61,8 +61,29 @@ namespace NexusRpc.Handlers
         /// </summary>
         /// <param name="instance">Instance of service handler class.</param>
         /// <returns>Service handler instance.</returns>
-        public static ServiceHandlerInstance FromInstance(object instance)
+        public static ServiceHandlerInstance FromInstance(object instance) =>
+            FromInstance(instance, Array.Empty<IMethodExtension>());
+
+        /// <summary>
+        /// Create a service handler instance from an instance of a class with a
+        /// <see cref="NexusServiceHandlerAttribute"/> attribute, using the given method extensions
+        /// to recognize additional handler attributes.
+        /// </summary>
+        /// <param name="instance">Instance of service handler class.</param>
+        /// <param name="methodExtensions">Extensions applied to each method that does not have a
+        /// <see cref="NexusOperationHandlerAttribute"/>. Extensions are consulted in order; the
+        /// first extension whose <see cref="IMethodExtension.Extract"/> returns non-null claims the
+        /// method. Duplicate operation-name registrations across the built-in path and any
+        /// extension fail with <see cref="ArgumentException"/>.</param>
+        /// <returns>Service handler instance.</returns>
+        public static ServiceHandlerInstance FromInstance(
+            object instance,
+            IReadOnlyCollection<IMethodExtension> methodExtensions)
         {
+            if (methodExtensions == null)
+            {
+                throw new ArgumentNullException(nameof(methodExtensions));
+            }
             // Make sure the attribute is on the declaring type of the instance
             var handlerAttr = instance.GetType().GetCustomAttribute<NexusServiceHandlerAttribute>() ??
                 throw new ArgumentException("Missing NexusServiceHandler attribute");
@@ -76,19 +97,50 @@ namespace NexusRpc.Handlers
             var opHandlers = new Dictionary<string, IOperationHandler<object?, object?>>();
             foreach (var method in methods)
             {
-                // Only care about ones with operation attribute
-                if (method.GetCustomAttribute<NexusOperationHandlerAttribute>() == null)
+                if (method.GetCustomAttribute<NexusOperationHandlerAttribute>() != null)
+                {
+                    try
+                    {
+                        AddOperationHandler(serviceDef, instance, method, opHandlers);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new ArgumentException(
+                            $"Failed obtaining operation handler from {method.Name}", e);
+                    }
+                    continue;
+                }
+                // The method is an operation only if it maps by name to one on the service. Skip
+                // methods that don't; extensions are consulted only for real operations.
+                var opDef = serviceDef.Operations.Values
+                    .FirstOrDefault(o => o.MethodInfo?.Name == method.Name);
+                if (opDef == null)
                 {
                     continue;
                 }
-                try
+                foreach (var extension in methodExtensions)
                 {
-                    AddOperationHandler(serviceDef, instance, method, opHandlers);
-                }
-                catch (Exception e)
-                {
-                    throw new ArgumentException(
-                        $"Failed obtaining operation handler from {method.Name}", e);
+                    IOperationHandler<object?, object?>? handler;
+                    try
+                    {
+                        handler = extension.Extract(instance, method, opDef);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new ArgumentException(
+                            $"Failed obtaining operation handler from {method.Name}", e);
+                    }
+                    if (handler == null)
+                    {
+                        continue;
+                    }
+                    if (opHandlers.ContainsKey(opDef.Name))
+                    {
+                        throw new ArgumentException(
+                            $"Duplicate operation handler for operation '{opDef.Name}'");
+                    }
+                    opHandlers[opDef.Name] = handler;
+                    break;
                 }
             }
 
@@ -158,10 +210,13 @@ namespace NexusRpc.Handlers
 
         private static void CollectTypeMethods(Type type, List<MethodInfo> methods)
         {
-            // Add all declared public static/instance methods that do not already have one like
-            // it present
+            // Add all declared static/instance methods (public + non-public) that do not already
+            // have one like it present. Non-public methods are included so that extensions can
+            // produce clear errors when a recognized attribute is applied to a non-public method;
+            // the built-in [NexusOperationHandler] path enforces public separately.
             foreach (var method in type.GetMethods(
-                BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+                BindingFlags.Public | BindingFlags.NonPublic |
+                BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
             {
                 // Only add if there isn't already one that matches the base definition
                 var baseDef = method.GetBaseDefinition();
