@@ -201,6 +201,21 @@ public class ServiceHandlerInstanceTests : TestBase
                 new IMethodExtension[] { new MarkerExtension() }).OperationHandlers).Key);
 
     [NexusServiceHandler(typeof(ISimpleService))]
+    public class AsyncOperationViaExtension
+    {
+        [Marker]
+        public Task<string> DoSomethingAsync(string input) => throw new NotImplementedException();
+    }
+
+    [Fact]
+    public void FromInstance_WithExtension_MatchesAsyncSuffix() =>
+        Assert.Equal(
+            "DoSomething",
+            Assert.Single(ServiceHandlerInstance.FromInstance(
+                new AsyncOperationViaExtension(),
+                new IMethodExtension[] { new MarkerExtension() }).OperationHandlers).Key);
+
+    [NexusServiceHandler(typeof(ISimpleService))]
     public class OperationHandlerAndExtension
     {
         [NexusOperationHandler]

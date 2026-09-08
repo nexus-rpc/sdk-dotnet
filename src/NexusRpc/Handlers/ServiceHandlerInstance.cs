@@ -113,7 +113,9 @@ namespace NexusRpc.Handlers
                 // The method is an operation only if it maps by name to one on the service. Skip
                 // methods that don't; extensions are consulted only for real operations.
                 var opDef = serviceDef.Operations.Values
-                    .FirstOrDefault(o => o.MethodInfo?.Name == method.Name);
+                    .FirstOrDefault(o => o.MethodInfo?.Name == method.Name) ??
+                    serviceDef.Operations.Values.FirstOrDefault(o => o.MethodInfo != null &&
+                    o.MethodInfo.Name + "Async" == method.Name);
                 if (opDef == null)
                 {
                     continue;
