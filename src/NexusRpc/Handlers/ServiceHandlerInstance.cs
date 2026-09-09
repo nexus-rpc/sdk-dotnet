@@ -111,11 +111,16 @@ namespace NexusRpc.Handlers
                     continue;
                 }
                 // The method is an operation only if it maps by name to one on the service. Skip
-                // methods that don't; extensions are consulted only for real operations.
+                // methods that don't; extensions are consulted only for real operations. Methods
+                // that end in 'Async' are considered to match operations without that suffix to
+                // follow .NET convention of using the 'Async' suffix on methods that return Task<>
                 var opDef = serviceDef.Operations.Values
-                    .FirstOrDefault(o => o.MethodInfo?.Name == method.Name) ??
-                    serviceDef.Operations.Values.FirstOrDefault(o => o.MethodInfo != null &&
-                    o.MethodInfo.Name + "Async" == method.Name);
+                    .FirstOrDefault(o => o.MethodInfo?.Name == method.Name);
+                if (opDef == null && method.Name.Length > 5 && method.Name.EndsWith("Async", StringComparison.Ordinal))
+                {
+                    var trimmed = method.Name.Substring(0, method.Name.Length - 5);
+                    opDef = serviceDef.Operations.Values.FirstOrDefault(o => o.MethodInfo?.Name == trimmed);
+                }
                 if (opDef == null)
                 {
                     continue;

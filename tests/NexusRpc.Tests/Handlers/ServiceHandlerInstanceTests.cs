@@ -215,6 +215,92 @@ public class ServiceHandlerInstanceTests : TestBase
                 new AsyncOperationViaExtension(),
                 new IMethodExtension[] { new MarkerExtension() }).OperationHandlers).Key);
 
+    [NexusService]
+    public interface IAsyncSuffixService
+    {
+        [NexusOperation]
+        string DoSomething(string param);
+
+        [NexusOperation]
+        string DoSomethingAsync(string param);
+    }
+
+    [NexusServiceHandler(typeof(IAsyncSuffixService))]
+    public class AsyncSuffixHandler
+    {
+        [Marker]
+        public string DoSomething(string input) => throw new NotImplementedException();
+
+        [Marker]
+        public Task<string> DoSomethingAsync(string input) => throw new NotImplementedException();
+    }
+
+    [Fact]
+    public void FromInstance_WithExtension_MatchesExactFirst()
+    {
+        var matches = new Dictionary<string, string>();
+        var instance = ServiceHandlerInstance.FromInstance(
+                new AsyncSuffixHandler(),
+                new IMethodExtension[]
+                {
+                    new MarkerExtension((method, opDef) =>
+                    {
+                        matches.Add(method.Name, opDef.Name);
+                        return CreateMarkerHandler();
+                    }),
+                });
+
+        Assert.Equal(2, instance.OperationHandlers.Count);
+        Assert.Equal("DoSomething", matches["DoSomething"]);
+        Assert.Equal("DoSomethingAsync", matches["DoSomethingAsync"]);
+    }
+
+    [NexusServiceHandler(typeof(ISimpleService))]
+    public class DuplicateAsyncSuffixHandler
+    {
+        [Marker]
+        public string DoSomething(string input) => throw new NotImplementedException();
+
+        [Marker]
+        public Task<string> DoSomethingAsync(string input) => throw new NotImplementedException();
+    }
+
+    [Fact]
+    public void FromInstance_WithExtension_DuplicateWithSuffixRaisesException()
+    {
+        var exc = Assert.Throws<ArgumentException>(() =>
+            ServiceHandlerInstance.FromInstance(
+                new DuplicateAsyncSuffixHandler(),
+                new IMethodExtension[] { new MarkerExtension() }));
+        Assert.Contains("Duplicate operation handler for operation 'DoSomething'", exc.Message);
+    }
+
+    [NexusService]
+    public interface IAsyncSuffixOnlyService
+    {
+        [NexusOperation]
+        string DoSomethingAsync(string param);
+    }
+
+    [NexusServiceHandler(typeof(IAsyncSuffixOnlyService))]
+    public class UnsuffixedOperationHandler
+    {
+        [Marker]
+        public string DoSomething(string input) => throw new NotImplementedException();
+    }
+
+    [Fact]
+    public void FromInstance_WithExtension_DoesNotMatchWithoutAsyncSuffix()
+    {
+        // A recognized method whose name does not map to any operation is not consulted, so the
+        // service is left without a handler for its declared operation.
+        var exc = Assert.Throws<ArgumentException>(() =>
+            ServiceHandlerInstance.FromInstance(
+                new UnsuffixedOperationHandler(),
+                new IMethodExtension[] { new MarkerExtension() }));
+        Assert.Contains("Missing handlers for defined operations", exc.Message);
+    }
+
     [NexusServiceHandler(typeof(ISimpleService))]
     public class OperationHandlerAndExtension
     {
@@ -250,10 +336,10 @@ public class ServiceHandlerInstanceTests : TestBase
             new TwoExtensionsSameName(),
             new IMethodExtension[]
             {
-                new MarkerExtension(opName =>
+                new MarkerExtension((_, opDef) =>
                     OperationHandler.WrapAsGenericHandler(
                         OperationHandler.Sync<string, string>((ctx, input) => "first"))),
-                new MarkerExtension(opName =>
+                new MarkerExtension((_, opDef) =>
                     OperationHandler.WrapAsGenericHandler(
                         OperationHandler.Sync<string, string>((ctx, input) => "second"))),
             });
@@ -298,11 +384,15 @@ public class ServiceHandlerInstanceTests : TestBase
         }
     }
 
+    private static IOperationHandler<object?, object?> CreateMarkerHandler() =>
+        OperationHandler.WrapAsGenericHandler(
+        OperationHandler.Sync<string, string>((ctx, input) => $"marker: {input}"));
+
     private sealed class MarkerExtension : IMethodExtension
     {
-        private readonly Func<string, IOperationHandler<object?, object?>>? handlerFactory;
+        private readonly Func<MethodInfo, OperationDefinition, IOperationHandler<object?, object?>>? handlerFactory;
 
-        public MarkerExtension(Func<string, IOperationHandler<object?, object?>>? factory = null) =>
+        public MarkerExtension(Func<MethodInfo, OperationDefinition, IOperationHandler<object?, object?>>? factory = null) =>
             handlerFactory = factory;
 
         public IOperationHandler<object?, object?>? Extract(
@@ -313,9 +403,8 @@ public class ServiceHandlerInstanceTests : TestBase
                 return null;
             }
             return handlerFactory != null
-                ? handlerFactory(operationDefinition.Name)
-                : OperationHandler.WrapAsGenericHandler(
-                    OperationHandler.Sync<string, string>((ctx, input) => $"marker: {input}"));
+                ? handlerFactory(method, operationDefinition)
+                : CreateMarkerHandler();
         }
     }
 }
