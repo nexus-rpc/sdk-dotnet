@@ -9,7 +9,8 @@ namespace NexusRpc.Handlers
     /// <remarks>
     /// <para>Extensions are invoked for every method on the service handler class that does not
     /// have a <see cref="NexusOperationHandlerAttribute"/> and that maps by method name to an
-    /// operation on the service. Extensions are given the raw <see cref="MethodInfo"/> plus the
+    /// operation on the service. Methods that end in 'Async' are considered to match operations
+    /// without that suffix. Extensions are given the raw <see cref="MethodInfo"/> plus the
     /// matched <see cref="OperationDefinition"/> and return the operation handler when they
     /// recognize the method, or <c>null</c> otherwise.</para>
     /// <para>If two extensions (or an extension and <see cref="NexusOperationHandlerAttribute"/>)

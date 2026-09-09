@@ -70,11 +70,14 @@ namespace NexusRpc.Handlers
         /// to recognize additional handler attributes.
         /// </summary>
         /// <param name="instance">Instance of service handler class.</param>
-        /// <param name="methodExtensions">Extensions applied to each method that does not have a
-        /// <see cref="NexusOperationHandlerAttribute"/>. Extensions are consulted in order; the
-        /// first extension whose <see cref="IMethodExtension.Extract"/> returns non-null claims the
-        /// method. Duplicate operation-name registrations across the built-in path and any
-        /// extension fail with <see cref="ArgumentException"/>.</param>
+        /// <param name="methodExtensions">
+        /// Extensions used to identify additional operation handlers. They are evaluated in order for
+        /// methods that match an operation definition by name and do not have a
+        /// <see cref="NexusOperationHandlerAttribute"/>. A method ending in <c>Async</c> may match an
+        /// operation without that suffix. The first extension whose <see cref="IMethodExtension.Extract"/>
+        /// method returns a non-null value claims the method. Registering the same operation name more
+        /// than once throws an <see cref="ArgumentException"/>.
+        /// </param>
         /// <returns>Service handler instance.</returns>
         public static ServiceHandlerInstance FromInstance(
             object instance,
@@ -111,9 +114,16 @@ namespace NexusRpc.Handlers
                     continue;
                 }
                 // The method is an operation only if it maps by name to one on the service. Skip
-                // methods that don't; extensions are consulted only for real operations.
+                // methods that don't; extensions are consulted only for real operations. Methods
+                // that end in 'Async' are considered to match operations without that suffix to
+                // follow .NET convention of using the 'Async' suffix on methods that return Task<>
                 var opDef = serviceDef.Operations.Values
                     .FirstOrDefault(o => o.MethodInfo?.Name == method.Name);
+                if (opDef == null && method.Name.Length > 5 && method.Name.EndsWith("Async", StringComparison.Ordinal))
+                {
+                    var trimmed = method.Name.Substring(0, method.Name.Length - 5);
+                    opDef = serviceDef.Operations.Values.FirstOrDefault(o => o.MethodInfo?.Name == trimmed);
+                }
                 if (opDef == null)
                 {
                     continue;
