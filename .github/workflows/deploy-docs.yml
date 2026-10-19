@@ -24,8 +24,8 @@ jobs:
 
       - name: Build docs
         run: |
-          dotnet tool update -g docfx --allow-roll-forward
-          docfx src/NexusRpc/docs/docfx.json --warningsAsErrors
+          dotnet tool restore
+          dotnet docfx src/NexusRpc/docs/docfx.json --warningsAsErrors
 
       - name: Upload docs to GitHub Pages
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

@@ -34,8 +34,8 @@ jobs:
 
       - name: Build docs
         run: |
-          dotnet tool update -g docfx --version "2.77.*" --allow-roll-forward
-          docfx src/NexusRpc/docs/docfx.json --warningsAsErrors
+          dotnet tool restore
+          dotnet docfx src/NexusRpc/docs/docfx.json --warningsAsErrors
 
       - name: Test
         run: dotnet test --logger "console;verbosity=detailed"
