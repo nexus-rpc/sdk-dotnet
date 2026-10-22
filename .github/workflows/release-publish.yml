@@ -23,12 +23,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Require main
+      - name: Require trial branch
         env:
           RELEASE_REF: ${{ github.ref }}
         run: |
-          if [ "$RELEASE_REF" != "refs/heads/main" ]; then
-            echo "Release publishing must be dispatched from main" >&2
+          if [ "$RELEASE_REF" != "refs/heads/amazzeo/release-automation-trial" ]; then
+            echo "Trial publishing must be dispatched from amazzeo/release-automation-trial" >&2
             exit 1
           fi
 
@@ -114,6 +114,7 @@ jobs:
           version: ${{ needs.read-version.outputs.version }}
 
   publish-prod:
+    if: ${{ false }}
     needs: [smoke-int, read-version]
     permissions:
       contents: read
@@ -126,6 +127,7 @@ jobs:
       version: ${{ needs.read-version.outputs.version }}
 
   smoke-prod:
+    if: ${{ false }}
     needs: [publish-prod, read-version]
     runs-on: windows-latest
     steps:
@@ -139,7 +141,7 @@ jobs:
           version: ${{ needs.read-version.outputs.version }}
 
   create-release-draft:
-    needs: [smoke-prod, read-version]
+    needs: [smoke-int, read-version]
     runs-on: ubuntu-latest
     permissions:
       contents: write
