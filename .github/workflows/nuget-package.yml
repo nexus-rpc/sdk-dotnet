@@ -1,0 +1,57 @@
+name: NuGet Package
+on:
+  push:
+    branches:
+      - main
+      - "releases/*"
+  workflow_dispatch: {}
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build-nuget-package:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Build package
+        run: dotnet pack src/NexusRpc -c Release /p:ContinuousIntegrationBuild=true --output nuget-package
+
+      - name: Upload NuGet artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: nuget-package
+          path: |
+            nuget-package/*.nupkg
+            nuget-package/*.snupkg
+          if-no-files-found: error
+
+  run-smoke-test:
+    needs: build-nuget-package
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download NuGet artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: nuget-package
+          path: nuget-package
+
+      - name: Run smoke test
+        uses: ./.github/actions/smoke-test
+        with:
+          package-source: "${{ github.workspace }}/nuget-package;https://api.nuget.org/v3/index.json"

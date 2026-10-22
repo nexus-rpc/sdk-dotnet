@@ -15,15 +15,15 @@ jobs:
         include:
           - os: windows-latest
             checkTarget: true
-    runs-on: ${{ matrix.runsOn || matrix.os }}
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 8
+          global-json-file: global.json
 
       - name: Check format
         if: ${{ matrix.checkTarget }}
@@ -34,8 +34,12 @@ jobs:
 
       - name: Build docs
         run: |
-          dotnet tool update -g docfx --version "2.77.*"
-          docfx src/NexusRpc/docs/docfx.json --warningsAsErrors
+          dotnet tool restore
+          dotnet docfx src/NexusRpc/docs/docfx.json --warningsAsErrors
 
       - name: Test
         run: dotnet test --logger "console;verbosity=detailed"
+
+      - name: Test release validation
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: dotnet run --file scripts/release.cs -- test

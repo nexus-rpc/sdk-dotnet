@@ -1,0 +1,90 @@
+name: Smoke test NexusRpc package
+description: Restore and exercise the packed NexusRpc SDK, without a project reference or cached package.
+
+inputs:
+  package-source:
+    description: Semicolon-separated NuGet sources for the package and its dependencies.
+    required: true
+  version:
+    description: Exact NexusRpc version to restore (empty reads Directory.Build.props).
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      with:
+        global-json-file: global.json
+
+    - name: Run smoke test (Linux/macOS)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash
+      env:
+        PACKAGE_SOURCE: ${{ inputs.package-source }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        version="$VERSION"
+        if [ -z "$version" ]; then
+          version=$(dotnet msbuild "$GITHUB_WORKSPACE/src/NexusRpc/NexusRpc.csproj" -getProperty:Version)
+        fi
+        directory=$(mktemp -d "$RUNNER_TEMP/nexusrpc-smoke-XXXXXX")
+        cp "$GITHUB_WORKSPACE"/scripts/smoke-test/* "$directory/"
+        # The isolated project must use the pinned SDK even outside the repository.
+        cp "$GITHUB_WORKSPACE/global.json" "$directory/"
+        # A private cache prevents a local artifact or previous gallery restore from masking a bad publication.
+        export NUGET_PACKAGES="$directory/packages"
+        dotnet add "$directory/SmokeTest.csproj" package NexusRpc --version "$version" --no-restore
+        IFS=';' read -r -a sources <<< "$PACKAGE_SOURCE"
+        source_args=()
+        for source in "${sources[@]}"; do
+          source_args+=(--source "$source")
+        done
+        dotnet restore "$directory/SmokeTest.csproj" "${source_args[@]}" --no-cache
+        dotnet build "$directory/SmokeTest.csproj" --no-restore
+        dotnet run --project "$directory/SmokeTest.csproj" --framework net10.0 --no-build --no-restore
+
+    - name: Run smoke test (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      env:
+        PACKAGE_SOURCE: ${{ inputs.package-source }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        $ErrorActionPreference = "Stop"
+        $version = $env:VERSION
+        if (!$version) {
+          [xml]$props = Get-Content "$env:GITHUB_WORKSPACE/Directory.Build.props"
+          $version = [string]($props.Project.PropertyGroup.Version | Where-Object { $_ })
+        }
+        $directory = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString())
+        New-Item -ItemType Directory -Path $directory | Out-Null
+        Copy-Item "$env:GITHUB_WORKSPACE/scripts/smoke-test/*" $directory
+        # The isolated project must use the pinned SDK even outside the repository.
+        Copy-Item "$env:GITHUB_WORKSPACE/global.json" $directory
+        # A private cache prevents a local artifact or previous gallery restore from masking a bad publication.
+        $env:NUGET_PACKAGES = Join-Path $directory "packages"
+        dotnet add "$directory/SmokeTest.csproj" package NexusRpc --version $version --no-restore
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        # NuGet.Config avoids Windows command-line handling that can turn HTTPS sources into local paths.
+        [xml]$config = '<configuration><packageSources><clear /></packageSources></configuration>'
+        $index = 0
+        foreach ($source in $env:PACKAGE_SOURCE.Split(';')) {
+          $entry = $config.CreateElement("add")
+          $entry.SetAttribute("key", "source-$index")
+          $entry.SetAttribute("value", $source)
+          $config.configuration.packageSources.AppendChild($entry) | Out-Null
+          $index++
+        }
+        $configPath = Join-Path $directory "NuGet.Config"
+        $config.Save($configPath)
+        dotnet restore "$directory/SmokeTest.csproj" --configfile $configPath --no-cache
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        dotnet build "$directory/SmokeTest.csproj" --no-restore
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        dotnet run --project "$directory/SmokeTest.csproj" --framework net10.0 --no-build --no-restore
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        dotnet run --project "$directory/SmokeTest.csproj" --framework net462 --no-build --no-restore
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }

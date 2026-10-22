@@ -1,0 +1,128 @@
+name: NuGet Publish
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub environment holding the Trusted Publishing policy and approval gate.
+        required: true
+        type: string
+      index-url:
+        description: V3 package source to push to and check for availability.
+        required: true
+        type: string
+      token-service-url:
+        description: Trusted Publishing OIDC token-exchange endpoint for this gallery.
+        required: true
+        type: string
+      audience:
+        description: OIDC audience expected by the gallery.
+        required: false
+        type: string
+        default: https://www.nuget.org
+      version:
+        description: Version expected to appear in the gallery listing.
+        required: true
+        type: string
+      artifact-name:
+        description: Run artifact containing verified packages and package-ids.txt.
+        required: false
+        type: string
+        default: release-package
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: global.json
+          sparse-checkout-cone-mode: false
+
+      - name: Download NuGet artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ github.workspace }}/nuget-package
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+          token-service-url: ${{ inputs.token-service-url }}
+          audience: ${{ inputs.audience }}
+
+      - name: Push packages
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+          INDEX_URL: ${{ inputs.index-url }}
+        run: |
+          dotnet nuget push "$GITHUB_WORKSPACE/nuget-package/**/*.nupkg" \
+            --api-key "$NUGET_API_KEY" \
+            --source "$INDEX_URL" \
+            --no-symbols \
+            --skip-duplicate
+
+          dotnet nuget push "$GITHUB_WORKSPACE/nuget-package/**/*.snupkg" \
+            --api-key "$NUGET_API_KEY" \
+            --source "$INDEX_URL" \
+            --skip-duplicate
+
+  wait:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download verified package manifest
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: nuget-package
+
+      - name: Wait for packages to be available
+        env:
+          VERSION: ${{ inputs.version }}
+          INDEX_URL: ${{ inputs.index-url }}
+        run: |
+          set -euo pipefail
+          VERSION=$(printf '%s' "$VERSION" | tr '[:upper:]' '[:lower:]')
+          base=$(curl -fsSL "$INDEX_URL" | jq -er \
+            '.resources[] | select(."@type" == "PackageBaseAddress/3.0.0") | ."@id"')
+          remaining=$(tr '[:upper:]' '[:lower:]' < nuget-package/package-ids.txt)
+          if [ -z "$remaining" ]; then
+            echo "Verified package manifest is empty" >&2
+            exit 1
+          fi
+          deadline=$(( $(date +%s) + 1800 ))
+          while true; do
+            pending=""
+            for pkg in $remaining; do
+              if curl -fsSL "${base%/}/$pkg/index.json" 2>/dev/null \
+                   | jq -e --arg v "$VERSION" '.versions | index($v)' >/dev/null; then
+                echo "  $pkg $VERSION is available"
+              else
+                pending="$pending $pkg"
+              fi
+            done
+            remaining="${pending# }"
+            [ -z "$remaining" ] && break
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "Timed out; still not available: $remaining" >&2
+              exit 1
+            fi
+            echo "Pending: $remaining. Waiting for 15s..."
+            sleep 15
+          done
