@@ -68,8 +68,19 @@ runs:
         $env:NUGET_PACKAGES = Join-Path $directory "packages"
         dotnet add "$directory/SmokeTest.csproj" package NexusRpc --version $version --no-restore
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
-        $sources = @($env:PACKAGE_SOURCE.Split(';') | ForEach-Object { "--source"; $_ })
-        dotnet restore "$directory/SmokeTest.csproj" @sources --no-cache
+        # NuGet.Config avoids Windows command-line handling that can turn HTTPS sources into local paths.
+        [xml]$config = '<configuration><packageSources><clear /></packageSources></configuration>'
+        $index = 0
+        foreach ($source in $env:PACKAGE_SOURCE.Split(';')) {
+          $entry = $config.CreateElement("add")
+          $entry.SetAttribute("key", "source-$index")
+          $entry.SetAttribute("value", $source)
+          $config.configuration.packageSources.AppendChild($entry) | Out-Null
+          $index++
+        }
+        $configPath = Join-Path $directory "NuGet.Config"
+        $config.Save($configPath)
+        dotnet restore "$directory/SmokeTest.csproj" --configfile $configPath --no-cache
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
         dotnet build "$directory/SmokeTest.csproj" --no-restore
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
