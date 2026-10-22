@@ -32,8 +32,9 @@ See [Development](README.md#development) for build, formatting, and test instruc
    GitHub release. Package availability checks do not verify symbol indexing.
 
 The package smoke test restores the exact version into a fresh private cache and
-exercises service-definition reflection. It runs on .NET 10; this port does not add
-a .NET Framework runtime smoke test or change the library's supported targets.
+exercises service-definition reflection. Both .NET 10 and .NET Framework 4.6.2
+targets are built on every platform. The .NET 10 target runs everywhere; the
+.NET Framework target runs only on Windows.
 
 ## Recovery
 

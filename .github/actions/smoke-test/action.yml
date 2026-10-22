@@ -43,7 +43,8 @@ runs:
           source_args+=(--source "$source")
         done
         dotnet restore "$directory/SmokeTest.csproj" "${source_args[@]}" --no-cache
-        dotnet run --project "$directory/SmokeTest.csproj" --no-restore
+        dotnet build "$directory/SmokeTest.csproj" --no-restore
+        dotnet run --project "$directory/SmokeTest.csproj" --framework net10.0 --no-build --no-restore
 
     - name: Run smoke test (Windows)
       if: ${{ runner.os == 'Windows' }}
@@ -70,5 +71,9 @@ runs:
         $sources = @($env:PACKAGE_SOURCE.Split(';') | ForEach-Object { "--source"; $_ })
         dotnet restore "$directory/SmokeTest.csproj" @sources --no-cache
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
-        dotnet run --project "$directory/SmokeTest.csproj" --no-restore
+        dotnet build "$directory/SmokeTest.csproj" --no-restore
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        dotnet run --project "$directory/SmokeTest.csproj" --framework net10.0 --no-build --no-restore
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        dotnet run --project "$directory/SmokeTest.csproj" --framework net462 --no-build --no-restore
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
